@@ -35,3 +35,16 @@ jobs:
         uses: github/codeql-action/analyze@5ba2889ada762081db2c4f32a729827dce632c7b # v3
         with:
           category: "/language:go"
+          # This private repository does not have GitHub Code Scanning enabled.
+          # Keep the analysis mandatory and retain the SARIF as a workflow
+          # artifact instead of failing after a successful scan upload attempt.
+          output: sarif-results
+          upload: never
+
+      - name: Retain CodeQL SARIF
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: codeql-sarif
+          path: sarif-results
+          if-no-files-found: error
+          retention-days: 14
