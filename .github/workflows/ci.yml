@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Go quality and tests
+  quality:
+    name: Quality and tests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -68,6 +68,13 @@ jobs:
           go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
           "$GOBIN/gosec" ./...
 
+      - name: Lint GitHub Actions workflows
+        run: |
+          export GOBIN="$RUNNER_TEMP/go-tools"
+          mkdir -p "$GOBIN"
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.9
+          "$GOBIN/actionlint" -color -shellcheck= -pyflakes=
+
   build:
     name: Reproducible container build
     runs-on: ubuntu-24.04
@@ -110,25 +117,5 @@ jobs:
 
       - name: Scan for exposed secrets
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
-
-  actionlint:
-    name: GitHub Actions lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Check out source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: go.mod
-          check-latest: true
-          cache: false
-
-      - name: Lint workflows
-        run: |
-          export GOBIN="$RUNNER_TEMP/go-tools"
-          mkdir -p "$GOBIN"
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.9
-          "$GOBIN/actionlint" -color -shellcheck= -pyflakes=
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
