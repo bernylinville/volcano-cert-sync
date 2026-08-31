@@ -40,6 +40,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=long
+          flavor: |
+            latest=false
 
       - name: Build and publish immutable image
         id: push
