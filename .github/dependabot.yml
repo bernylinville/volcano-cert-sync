@@ -9,9 +9,19 @@ updates:
     groups:
       go-minor-and-patch:
         update-types: [minor, patch]
+    # Kubernetes publishes its api, apimachinery, and client-go modules as a
+    # compatibility set. Updating only one breaks module resolution, so update
+    # the trio together in a reviewed change instead of with Dependabot.
+    ignore:
+      - dependency-name: k8s.io/api
+      - dependency-name: k8s.io/apimachinery
+      - dependency-name: k8s.io/client-go
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
