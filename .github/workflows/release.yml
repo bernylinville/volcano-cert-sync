@@ -8,7 +8,6 @@ permissions:
   contents: read
   packages: write
   id-token: write
-  attestations: write
 
 env:
   REGISTRY: ghcr.io
@@ -53,15 +52,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.ref_name }}
+          # BuildKit publishes OCI provenance and SBOM attestations with the
+          # image. This works for private packages, unlike GitHub's separate
+          # repository-attestation API for user-owned private repositories.
           provenance: mode=max
           sbom: true
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
