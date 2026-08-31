@@ -1,0 +1,26 @@
+# Credentials and local cluster configuration must never enter build context.
+.env
+.env.*
+!.env.example
+*.kubeconfig
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Source-control, local artifacts, and editor state.
+.git/
+.github/
+.DS_Store
+/volcano-cert-sync
+/bin/
+/dist/
+/coverage.out
+/coverage.txt
+*.test
+.idea/
+.vscode/
+
+# Deployment configuration is supplied by GitOps, not baked into the image.
+deploy/
+docs/

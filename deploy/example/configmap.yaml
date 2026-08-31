@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: volcano-cert-sync-config
+  namespace: cert-sync-example
+data:
+  K8S_SECRET_NAME: source-tls-secret
+  K8S_SECRET_NAMESPACE: cert-sync-example
+  SYNC_TARGETS: api.example.com:dcdn

@@ -1,0 +1,25 @@
+# Local credentials and Kubernetes access material
+.env
+.env.*
+!.env.example
+*.kubeconfig
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local build output
+/volcano-cert-sync
+/bin/
+/dist/
+/coverage.out
+/coverage.txt
+*.test
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Local tool state
+.mise.local.toml
