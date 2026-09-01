@@ -146,7 +146,7 @@ read permissions and reuses namespace-local registry pull credentials.
 ## Release and image promotion
 
 Pushing a signed version tag, for example `v1.0.0`, triggers the release
-workflow. It builds an immutable `linux/amd64` image in private GHCR, generates
+workflow. It builds an immutable public `linux/amd64` image in GHCR, generates
 an SBOM, publishes provenance, and keylessly signs the digest with Cosign. It
 does not publish a mutable `latest` tag.
 

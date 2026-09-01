@@ -26,7 +26,7 @@ func TestRenderMCDNRequestSubstitutesOnlyApprovedValues(t *testing.T) {
 
 	payload, err := renderMCDNRequest(template, mcdnTemplateValues{
 		domain: domain,
-		target: syncer.Target{Domain: "gxmc.xy-vsee.tv", Type: "mcdn"},
+		target: syncer.Target{Domain: "mcdn.example.com", Type: "mcdn"},
 	})
 	if err != nil {
 		t.Fatalf("renderMCDNRequest() error = %v", err)
@@ -36,7 +36,7 @@ func TestRenderMCDNRequestSubstitutesOnlyApprovedValues(t *testing.T) {
 		t.Fatalf("json.Marshal() error = %v", err)
 	}
 	text := string(encoded)
-	for _, want := range []string{"resource-1", "account-1", "gxmc.xy-vsee.tv", "builtin", "cdn", "__CERTIFICATE_ID__"} {
+	for _, want := range []string{"resource-1", "account-1", "mcdn.example.com", "builtin", "cdn", "__CERTIFICATE_ID__"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("rendered payload %s does not contain %q", text, want)
 		}

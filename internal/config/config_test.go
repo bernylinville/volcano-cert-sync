@@ -6,13 +6,13 @@ import (
 )
 
 func TestParseTargetsExplicitNormalizesAndPreservesType(t *testing.T) {
-	targets, err := ParseTargets(" CQCMMG.SD.PKSL.NET.CN.:dcdn, gxmc.xy-vsee.tv:mcdn ", "")
+	targets, err := ParseTargets(" DCDN.EXAMPLE.COM.:dcdn, mcdn.example.com:mcdn ", "")
 	if err != nil {
 		t.Fatalf("ParseTargets() error = %v", err)
 	}
 	want := []SyncTarget{
-		{Domain: "cqcmmg.sd.pksl.net.cn", Type: TargetDCDN},
-		{Domain: "gxmc.xy-vsee.tv", Type: TargetMCDN},
+		{Domain: "dcdn.example.com", Type: TargetDCDN},
+		{Domain: "mcdn.example.com", Type: TargetMCDN},
 	}
 	if len(targets) != len(want) {
 		t.Fatalf("ParseTargets() returned %d targets, want %d", len(targets), len(want))
