@@ -4,7 +4,7 @@ go 1.26.7
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/volcengine/volcengine-go-sdk v1.2.50
+	github.com/volcengine/volcengine-go-sdk v1.2.51
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
 	k8s.io/client-go v0.33.13
