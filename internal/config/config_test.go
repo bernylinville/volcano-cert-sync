@@ -56,13 +56,12 @@ func TestParseTargetsRejectsAmbiguousAndInvalidValues(t *testing.T) {
 
 func TestLoadFromValidatesInputs(t *testing.T) {
 	values := map[string]string{
-		"VOLCENGINE_ACCESS_KEY":        "access",
-		"VOLCENGINE_SECRET_KEY":        "secret",
-		"K8S_SECRET_NAME":              "source-tls",
-		"K8S_SECRET_NAMESPACE":         "rights",
-		"SYNC_TARGETS":                 "one.example.com:dcdn",
-		"DRY_RUN":                      "true",
-		"MCDN_DEPLOY_REQUEST_TEMPLATE": `{"CertificateId":"{{CERTIFICATE_ID}}"}`,
+		"VOLCENGINE_ACCESS_KEY": "access",
+		"VOLCENGINE_SECRET_KEY": "secret",
+		"K8S_SECRET_NAME":       "source-tls",
+		"K8S_SECRET_NAMESPACE":  "rights",
+		"SYNC_TARGETS":          "one.example.com:dcdn",
+		"DRY_RUN":               "true",
 	}
 	getenv := func(key string) string { return values[key] }
 

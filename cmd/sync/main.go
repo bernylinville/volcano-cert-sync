@@ -58,7 +58,7 @@ func run(ctx context.Context, logger *slog.Logger, flagDryRun bool) error {
 		"not_after", certificate.Leaf.NotAfter.UTC().Format(time.RFC3339),
 	)
 
-	backends, err := volcengine.NewBackends(cfg.VolcAccessKey, cfg.VolcSecretKey, cfg.MCDNDeployRequestTemplate)
+	backends, err := volcengine.NewBackends(cfg.VolcAccessKey, cfg.VolcSecretKey)
 	if err != nil {
 		return err
 	}

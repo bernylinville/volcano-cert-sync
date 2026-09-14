@@ -10,9 +10,9 @@ separate product APIs:
 
 - **DCDN** — imports/reuses the certificate in Certificate Center and binds it
   to all mismatched DCDN domains in one provider request.
-- **MCDN** — reads MCDN state through the official SDK and requires an
-  account-reviewed request template before it can submit the otherwise
-  undocumented certificate-deployment action.
+- **MCDN** — reads MCDN state through the official SDK; built-in CDN domains
+  deploy through the public CDN API, because they share the standard CDN
+  acceleration platform (volcengine support confirmation, September 2026).
 - **CDN** — retains explicit standard-CDN support for legacy targets only.
 
 ## Safety model
@@ -54,7 +54,6 @@ chmod 600 .env
 | `K8S_SECRET_NAMESPACE` | Yes | Source Secret namespace. |
 | `SYNC_TARGETS` | Yes | Comma-separated `domain:type` entries. Types are `cdn`, `dcdn`, and `mcdn`. |
 | `DRY_RUN` | No | `true` makes a full, read-only reconciliation run. |
-| `MCDN_DEPLOY_REQUEST_TEMPLATE` | Live MCDN only | Account-reviewed JSON for `SubmitCertificateDeployTask`; see [MCDN gate](#mcdn-deployment-gate). |
 
 For example:
 
@@ -90,29 +89,22 @@ For an intentional write after reviewing the dry-run output:
 go run ./cmd/sync
 ```
 
-## MCDN deployment gate
+## MCDN deployment path
 
-The public MCDN SDK exposes state inspection but does not publish the exact
-payload schema for the privileged `SubmitCertificateDeployTask` action. This
-repository intentionally refuses a mutating MCDN run without an authorized
-template instead of guessing a write payload.
+The console-only MCDN certificate action `SubmitCertificateDeployTask` is an
+internal console endpoint, not a published OpenAPI action. Volcengine
+support confirmed (September 2026) that MCDN built-in CDN acceleration shares
+the standard Volcengine CDN platform, so this synchronizer:
 
-Obtain the request shape from the authorized Volcengine console/API owner,
-review it, and store it only in encrypted private GitOps configuration. The
-template may use these placeholders:
+1. reads and preflights MCDN domains through the official MCDN SDK,
+   accepting only built-in CDN resources (`vendor=builtin`,
+   `sub_product=cdn`); and
+2. deploys certificates through the public CDN `AddCertificate` and
+   `BatchDeployCert` actions, reusing the standard-CDN write path.
 
-| Placeholder | Runtime value |
-| --- | --- |
-| `{{CERTIFICATE_ID}}` | Imported/reused Certificate Center instance ID. |
-| `{{RESOURCE_ID}}` | Exact MCDN resource ID obtained by a read-only lookup. |
-| `{{CLOUD_ACCOUNT_ID}}` | MCDN cloud-account ID obtained by a read-only lookup. |
-| `{{DOMAIN}}` | Configured domain. |
-| `{{VENDOR}}` | Provider-reported vendor. |
-| `{{SUB_PRODUCT}}` | Provider-reported sub-product. |
-
-The program verifies the target is the expected built-in CDN MCDN resource
-before submitting. It validates every rendered JSON payload before importing a
-private key into Certificate Center.
+Third-party vendor domains managed by MCDN are rejected in preflight: their
+certificates are deployed through vendor-specific console flows, not through
+the public CDN API.
 
 ## Container and Kubernetes deployment
 

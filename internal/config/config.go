@@ -38,11 +38,6 @@ type Config struct {
 	SecretNamespace string
 	SyncTargets     []SyncTarget
 	DryRun          bool
-
-	// MCDNDeployRequestTemplate is a JSON payload template for the currently
-	// undocumented MCDN submit action. It is optional for read-only dry-runs;
-	// an actual MCDN update refuses to run without a validated template.
-	MCDNDeployRequestTemplate string
 }
 
 // Load loads an optional local .env without overriding process environment.
@@ -64,13 +59,12 @@ func LoadFrom(getenv func(string) string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		VolcAccessKey:             strings.TrimSpace(getenv("VOLCENGINE_ACCESS_KEY")),
-		VolcSecretKey:             strings.TrimSpace(getenv("VOLCENGINE_SECRET_KEY")),
-		SecretName:                strings.TrimSpace(getenv("K8S_SECRET_NAME")),
-		SecretNamespace:           strings.TrimSpace(getenv("K8S_SECRET_NAMESPACE")),
-		SyncTargets:               targets,
-		DryRun:                    dryRun,
-		MCDNDeployRequestTemplate: strings.TrimSpace(getenv("MCDN_DEPLOY_REQUEST_TEMPLATE")),
+		VolcAccessKey:   strings.TrimSpace(getenv("VOLCENGINE_ACCESS_KEY")),
+		VolcSecretKey:   strings.TrimSpace(getenv("VOLCENGINE_SECRET_KEY")),
+		SecretName:      strings.TrimSpace(getenv("K8S_SECRET_NAME")),
+		SecretNamespace: strings.TrimSpace(getenv("K8S_SECRET_NAMESPACE")),
+		SyncTargets:     targets,
+		DryRun:          dryRun,
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
