@@ -10,8 +10,8 @@ import (
 )
 
 // CertCenterClient imports a source certificate once and reads the fingerprint
-// of an existing Certificate Center instance. It is shared by the DCDN
-// backend.
+// of an existing Certificate Center instance. It is shared by the DCDN and
+// MCDN backends.
 type CertCenterClient struct {
 	client *certificateservice.CERTIFICATESERVICE
 }

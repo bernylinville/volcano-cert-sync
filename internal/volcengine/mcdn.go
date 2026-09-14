@@ -14,15 +14,21 @@ import (
 // MCDNBackend reads MCDN state through the official SDK. A built-in CDN
 // domain (vendor=builtin, sub-product=cdn) shares the Volcengine CDN
 // platform, so certificate deployment goes through the public CDN
-// AddCertificate/BatchDeployCert API. Third-party vendor domains are
+// BatchDeployCert API with a Certificate Center instance. The CDN-hosting
+// upload source (AddCertificate with cdn_cert_hosting) is whitelisted per
+// account and is not authorized here. Third-party vendor domains are
 // rejected by Preflight because the public CDN API does not manage them.
 type MCDNBackend struct {
 	client            *mcdn.MCDN
 	cdnClient         *cdn.CDN
+	certificateCenter *CertCenterClient
 	publicFingerprint func(context.Context, string) (string, error)
 }
 
-func NewMCDNBackend(accessKey, secretKey string) (*MCDNBackend, error) {
+func NewMCDNBackend(accessKey, secretKey string, certificateCenter *CertCenterClient) (*MCDNBackend, error) {
+	if certificateCenter == nil {
+		return nil, fmt.Errorf("certificate center client is required for MCDN")
+	}
 	sess, err := newSession(accessKey, secretKey)
 	if err != nil {
 		return nil, err
@@ -30,6 +36,7 @@ func NewMCDNBackend(accessKey, secretKey string) (*MCDNBackend, error) {
 	return &MCDNBackend{
 		client:            mcdn.New(sess),
 		cdnClient:         cdn.New(sess),
+		certificateCenter: certificateCenter,
 		publicFingerprint: publicTLSFingerprint,
 	}, nil
 }
@@ -77,11 +84,17 @@ func (b *MCDNBackend) Deploy(ctx context.Context, certificate *cert.TLSCert, tar
 	if len(targets) == 0 {
 		return nil
 	}
+	// The certificate center import is already authorized for this account
+	// (DCDN uses it), so deploy by referencing the imported instance.
+	instanceID, err := b.certificateCenter.ImportCertificate(ctx, certificate)
+	if err != nil {
+		return err
+	}
 	domains := make([]string, 0, len(targets))
 	for _, target := range targets {
 		domains = append(domains, target.Domain)
 	}
-	return deployCertViaCDN(ctx, b.cdnClient, certificate, domains)
+	return deployCertViaCDNCenter(ctx, b.cdnClient, instanceID, domains)
 }
 
 func (b *MCDNBackend) domain(ctx context.Context, name string) (*mcdn.DomainForListCdnDomainsOutput, error) {

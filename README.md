@@ -99,8 +99,13 @@ the standard Volcengine CDN platform, so this synchronizer:
 1. reads and preflights MCDN domains through the official MCDN SDK,
    accepting only built-in CDN resources (`vendor=builtin`,
    `sub_product=cdn`); and
-2. deploys certificates through the public CDN `AddCertificate` and
-   `BatchDeployCert` actions, reusing the standard-CDN write path.
+2. imports the certificate into Certificate Center and binds it to the
+   domains through the public CDN `BatchDeployCert` action.
+
+The direct CDN-hosting upload (`AddCertificate` with source
+`cdn_cert_hosting`) is whitelisted per account; an unauthorized account
+receives `InvalidParameter.Source.WhitelistUnauthorized`. The certificate
+center import is used instead because DCDN already relies on it.
 
 Third-party vendor domains managed by MCDN are rejected in preflight: their
 certificates are deployed through vendor-specific console flows, not through

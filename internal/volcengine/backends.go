@@ -17,7 +17,7 @@ func NewBackends(accessKey, secretKey string) (map[string]syncer.Backend, error)
 	if err != nil {
 		return nil, fmt.Errorf("initialize DCDN client: %w", err)
 	}
-	mcdnBackend, err := NewMCDNBackend(accessKey, secretKey)
+	mcdnBackend, err := NewMCDNBackend(accessKey, secretKey, certificateCenter)
 	if err != nil {
 		return nil, fmt.Errorf("initialize MCDN client: %w", err)
 	}

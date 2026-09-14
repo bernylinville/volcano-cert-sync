@@ -101,9 +101,7 @@ func (b *CDNBackend) Deploy(ctx context.Context, certificate *cert.TLSCert, targ
 }
 
 // deployCertViaCDN uploads the certificate to CDN hosting and binds it to the
-// given domains in one batch request. MCDN built-in CDN domains share the
-// same acceleration platform, so both backends deploy through this public
-// API path (volcengine support confirmation, September 2026).
+// given domains in one batch request. Used by the standard-CDN backend.
 func deployCertViaCDN(ctx context.Context, client *cdn.CDN, certificate *cert.TLSCert, domains []string) error {
 	output, err := client.AddCertificateWithContext(ctx, &cdn.AddCertificateInput{
 		Certificate: ve.String(string(certificate.Certificate)),
@@ -118,7 +116,15 @@ func deployCertViaCDN(ctx context.Context, client *cdn.CDN, certificate *cert.TL
 	if certID == "" {
 		return fmt.Errorf("CDN AddCertificate returned no certificate ID")
 	}
+	return deployCertViaCDNCenter(ctx, client, certID, domains)
+}
 
+// deployCertViaCDNCenter binds an existing certificate (CDN hosting or
+// Certificate Center instance) to the given domains through the public CDN
+// BatchDeployCert API. MCDN built-in CDN domains share the same acceleration
+// platform, so this is also their write path (volcengine support
+// confirmation, September 2026).
+func deployCertViaCDNCenter(ctx context.Context, client *cdn.CDN, certID string, domains []string) error {
 	deployOutput, err := client.BatchDeployCertWithContext(ctx, &cdn.BatchDeployCertInput{
 		CertId: ve.String(certID),
 		Domain: ve.String(strings.Join(domains, ",")),
