@@ -44,6 +44,14 @@ type Backend interface {
 	Deploy(ctx context.Context, certificate *cert.TLSCert, targets []Target) error
 }
 
+// CertificateUploader is implemented by backends whose target product has no
+// public deploy API. An UploadOnly run imports the certificate into
+// Certificate Center and leaves the binding itself as a manual console step
+// that references the uploaded instance.
+type CertificateUploader interface {
+	Upload(ctx context.Context, certificate *cert.TLSCert) error
+}
+
 // Event is safe to write to structured logs. It contains no PEM, key, access
 // key, secret key, or full cloud request payload.
 type Event struct {
@@ -64,6 +72,7 @@ type Result struct {
 // can be replaced by deterministic clocks in tests.
 type Options struct {
 	DryRun       bool
+	UploadOnly   bool
 	PollInterval time.Duration
 	PollTimeout  time.Duration
 	Now          func() time.Time
@@ -147,6 +156,39 @@ func (s Service) Sync(ctx context.Context, certificate *cert.TLSCert, targets []
 	}
 
 	if options.DryRun {
+		return result, errors.Join(errs...)
+	}
+
+	// UploadOnly stops after the Certificate Center import: the binding is a
+	// manual console step for products without a public deploy API, so there
+	// is nothing to preflight, deploy, or wait for here.
+	if options.UploadOnly {
+		for _, productType := range sortedKeys(needsDeploy) {
+			group := needsDeploy[productType]
+			uploader, ok := s.Backends[productType].(CertificateUploader)
+			if !ok {
+				err := fmt.Errorf("upload-only: %s backend cannot upload certificates", productType)
+				errs = append(errs, err)
+				for _, target := range group {
+					result.Targets[target.Domain] = "failed"
+					s.report(options, target, "upload", "failed", certificate, err.Error())
+				}
+				continue
+			}
+			if err := uploader.Upload(ctx, certificate); err != nil {
+				err = fmt.Errorf("upload %s: %w", productType, err)
+				errs = append(errs, err)
+				for _, target := range group {
+					result.Targets[target.Domain] = "failed"
+					s.report(options, target, "upload", "failed", certificate, err.Error())
+				}
+				continue
+			}
+			for _, target := range group {
+				result.Targets[target.Domain] = "uploaded"
+				s.report(options, target, "upload", "uploaded", certificate, "certificate uploaded; binding is a manual console step")
+			}
+		}
 		return result, errors.Join(errs...)
 	}
 

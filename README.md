@@ -10,9 +10,10 @@ separate product APIs:
 
 - **DCDN** — imports/reuses the certificate in Certificate Center and binds it
   to all mismatched DCDN domains in one provider request.
-- **MCDN** — reads MCDN state through the official SDK; built-in CDN domains
-  deploy through the public CDN API, because they share the standard CDN
-  acceleration platform (volcengine support confirmation, September 2026).
+- **MCDN** — reads MCDN state through the official SDK and, under
+  `--upload-only`, imports the certificate into Certificate Center; the
+  domain binding stays a manual console step because no public deploy API
+  exists (volcengine support confirmation, September 2026).
 - **CDN** — retains explicit standard-CDN support for legacy targets only.
 
 ## Safety model
@@ -54,6 +55,7 @@ chmod 600 .env
 | `K8S_SECRET_NAMESPACE` | Yes | Source Secret namespace. |
 | `SYNC_TARGETS` | Yes | Comma-separated `domain:type` entries. Types are `cdn`, `dcdn`, and `mcdn`. |
 | `DRY_RUN` | No | `true` makes a full, read-only reconciliation run. |
+| `UPLOAD_ONLY` | MCDN | `true` imports the certificate into Certificate Center without deploying; see [MCDN deployment path](#mcdn-deployment-path). |
 
 For example:
 
@@ -92,24 +94,30 @@ go run ./cmd/sync
 ## MCDN deployment path
 
 The console-only MCDN certificate action `SubmitCertificateDeployTask` is an
-internal console endpoint, not a published OpenAPI action. Volcengine
-support confirmed (September 2026) that MCDN built-in CDN acceleration shares
-the standard Volcengine CDN platform, so this synchronizer:
+internal console endpoint, not a published OpenAPI action, and every public
+write path was rejected in production testing (September 2026):
+
+- CDN `BatchDeployCert`: MCDN built-in domains are absent from the CDN product
+  domain table (`NotFound.Domain`).
+- CDN `AddCertificate` with source `cdn_cert_hosting`: account-level whitelist
+  (`InvalidParameter.Source.WhitelistUnauthorized`), identical for main and
+  sub-account credentials.
+
+Volcengine support confirmed the supported automation is a manual console
+deployment referencing a Certificate Center instance. This synchronizer
+therefore:
 
 1. reads and preflights MCDN domains through the official MCDN SDK,
    accepting only built-in CDN resources (`vendor=builtin`,
    `sub_product=cdn`); and
-2. imports the certificate into Certificate Center and binds it to the
-   domains through the public CDN `BatchDeployCert` action.
+2. under `--upload-only`, imports the certificate into Certificate Center
+   (idempotent) and reports `uploaded`; the domain binding is deployed
+   manually from the console using the uploaded instance.
 
-The direct CDN-hosting upload (`AddCertificate` with source
-`cdn_cert_hosting`) is whitelisted per account; an unauthorized account
-receives `InvalidParameter.Source.WhitelistUnauthorized`. The certificate
-center import is used instead because DCDN already relies on it.
-
-Third-party vendor domains managed by MCDN are rejected in preflight: their
-certificates are deployed through vendor-specific console flows, not through
-the public CDN API.
+A mutating MCDN run without `--upload-only` fails with an explanation instead
+of guessing an API call. Third-party vendor domains managed by MCDN are
+rejected in preflight: their certificates are deployed through
+vendor-specific console flows, not through the public CDN API.
 
 ## Container and Kubernetes deployment
 

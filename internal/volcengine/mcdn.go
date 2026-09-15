@@ -7,20 +7,18 @@ import (
 
 	"github.com/bernylinville/volcano-cert-sync/internal/cert"
 	"github.com/bernylinville/volcano-cert-sync/internal/syncer"
-	"github.com/volcengine/volcengine-go-sdk/service/cdn"
 	"github.com/volcengine/volcengine-go-sdk/service/mcdn"
 )
 
-// MCDNBackend reads MCDN state through the official SDK. A built-in CDN
-// domain (vendor=builtin, sub-product=cdn) shares the Volcengine CDN
-// platform, so certificate deployment goes through the public CDN
-// BatchDeployCert API with a Certificate Center instance. The CDN-hosting
-// upload source (AddCertificate with cdn_cert_hosting) is whitelisted per
-// account and is not authorized here. Third-party vendor domains are
-// rejected by Preflight because the public CDN API does not manage them.
+// MCDNBackend reads MCDN state through the official SDK. Volcengine
+// confirmed there is no public API to deploy certificates to MCDN built-in
+// CDN domains (the CDN API rejects them and the console-only action is not
+// published), so the automated scope is the Certificate Center import. The
+// binding itself is a manual console step that references the uploaded
+// instance. Third-party vendor domains are rejected by Preflight because
+// they are managed through vendor-specific console flows.
 type MCDNBackend struct {
 	client            *mcdn.MCDN
-	cdnClient         *cdn.CDN
 	certificateCenter *CertCenterClient
 	publicFingerprint func(context.Context, string) (string, error)
 }
@@ -35,7 +33,6 @@ func NewMCDNBackend(accessKey, secretKey string, certificateCenter *CertCenterCl
 	}
 	return &MCDNBackend{
 		client:            mcdn.New(sess),
-		cdnClient:         cdn.New(sess),
 		certificateCenter: certificateCenter,
 		publicFingerprint: publicTLSFingerprint,
 	}, nil
@@ -80,21 +77,18 @@ func (b *MCDNBackend) Inspect(ctx context.Context, target syncer.Target) (syncer
 	return state, nil
 }
 
+// Upload imports the certificate into Certificate Center. This is the full
+// automated scope for MCDN targets; the domain binding is deployed manually
+// from the console using the uploaded instance.
+func (b *MCDNBackend) Upload(ctx context.Context, certificate *cert.TLSCert) error {
+	_, err := b.certificateCenter.ImportCertificate(ctx, certificate)
+	return err
+}
+
+// Deploy explains that MCDN built-in domains have no public deploy API.
+// A mutating MCDN run must use the upload-only mode instead.
 func (b *MCDNBackend) Deploy(ctx context.Context, certificate *cert.TLSCert, targets []syncer.Target) error {
-	if len(targets) == 0 {
-		return nil
-	}
-	// The certificate center import is already authorized for this account
-	// (DCDN uses it), so deploy by referencing the imported instance.
-	instanceID, err := b.certificateCenter.ImportCertificate(ctx, certificate)
-	if err != nil {
-		return err
-	}
-	domains := make([]string, 0, len(targets))
-	for _, target := range targets {
-		domains = append(domains, target.Domain)
-	}
-	return deployCertViaCDNCenter(ctx, b.cdnClient, instanceID, domains)
+	return fmt.Errorf("MCDN built-in CDN domains have no public deploy API (volcengine confirmation, September 2026); run with --upload-only and bind the Certificate Center instance from the console")
 }
 
 func (b *MCDNBackend) domain(ctx context.Context, name string) (*mcdn.DomainForListCdnDomainsOutput, error) {

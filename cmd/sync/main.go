@@ -21,6 +21,7 @@ var version = "dev"
 
 func main() {
 	dryRun := flag.Bool("dry-run", false, "Read and validate all state without cloud writes")
+	uploadOnly := flag.Bool("upload-only", false, "Import the certificate into Certificate Center without deploying; binding stays a manual console step")
 	showVersion := flag.Bool("version", false, "Print the release version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -29,19 +30,20 @@ func main() {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	if err := run(context.Background(), logger, *dryRun); err != nil {
+	if err := run(context.Background(), logger, *dryRun, *uploadOnly); err != nil {
 		logger.Error("certificate synchronization failed", "error", safeError(err))
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, logger *slog.Logger, flagDryRun bool) error {
+func run(ctx context.Context, logger *slog.Logger, flagDryRun, flagUploadOnly bool) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 	dryRun := cfg.DryRun || flagDryRun
-	logger.Info("starting certificate reconciliation", "dry_run", dryRun, "targets", targetNames(cfg.SyncTargets))
+	uploadOnly := (cfg.UploadOnly || flagUploadOnly) && !dryRun
+	logger.Info("starting certificate reconciliation", "dry_run", dryRun, "upload_only", uploadOnly, "targets", targetNames(cfg.SyncTargets))
 
 	kubernetesClient, err := k8s.NewClient()
 	if err != nil {
@@ -70,7 +72,8 @@ func run(ctx context.Context, logger *slog.Logger, flagDryRun bool) error {
 	service := syncer.Service{
 		Backends: backends,
 		Options: syncer.Options{
-			DryRun: dryRun,
+			DryRun:     dryRun,
+			UploadOnly: uploadOnly,
 			Report: func(event syncer.Event) {
 				logger.Info("certificate reconciliation event",
 					"stage", event.Stage,

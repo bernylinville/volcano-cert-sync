@@ -154,3 +154,60 @@ func (b *fakeBackend) Deploy(_ context.Context, _ *cert.TLSCert, targets []Targe
 	b.lastDeploy = append([]Target(nil), targets...)
 	return b.deployErr
 }
+
+// uploadingFake adds a Certificate Center upload to a fake backend, standing
+// in for the MCDN adapter under the upload-only mode.
+type uploadingFake struct {
+	fakeBackend
+	uploadCalls int
+}
+
+func (u *uploadingFake) Upload(_ context.Context, _ *cert.TLSCert) error {
+	u.uploadCalls++
+	return nil
+}
+
+func TestSyncUploadOnlyImportsWithoutDeployingOrVerifying(t *testing.T) {
+	backend := &uploadingFake{fakeBackend: *newFakeBackend(map[string][]State{
+		"one.example.com": {{CloudFingerprint: "old", PublicFingerprint: "old"}},
+	})}
+	service := Service{
+		Backends: map[string]Backend{"mcdn": backend},
+		Options:  Options{UploadOnly: true, Report: func(Event) {}},
+	}
+
+	result, err := service.Sync(context.Background(), testCertificate(), []Target{{Domain: "one.example.com", Type: "mcdn"}})
+	if err != nil {
+		t.Fatalf("Sync() error = %v", err)
+	}
+	if got := result.Targets["one.example.com"]; got != "uploaded" {
+		t.Fatalf("result = %q, want uploaded", got)
+	}
+	if backend.uploadCalls != 1 {
+		t.Fatalf("Upload() calls = %d, want 1", backend.uploadCalls)
+	}
+	if backend.preflightCalls != 0 || backend.deployCalls != 0 {
+		t.Fatalf("calls preflight=%d deploy=%d, want 0/0", backend.preflightCalls, backend.deployCalls)
+	}
+}
+
+func TestSyncUploadOnlyFailsForBackendWithoutUpload(t *testing.T) {
+	backend := newFakeBackend(map[string][]State{
+		"one.example.com": {{CloudFingerprint: "old", PublicFingerprint: "old"}},
+	})
+	service := Service{
+		Backends: map[string]Backend{"dcdn": backend},
+		Options:  Options{UploadOnly: true, Report: func(Event) {}},
+	}
+
+	result, err := service.Sync(context.Background(), testCertificate(), []Target{{Domain: "one.example.com", Type: "dcdn"}})
+	if err == nil {
+		t.Fatal("Sync() error = nil, want failure for a non-uploading backend")
+	}
+	if got := result.Targets["one.example.com"]; got != "failed" {
+		t.Fatalf("result = %q, want failed", got)
+	}
+	if backend.deployCalls != 0 {
+		t.Fatalf("Deploy() calls = %d, want 0", backend.deployCalls)
+	}
+}

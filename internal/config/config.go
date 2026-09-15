@@ -38,6 +38,7 @@ type Config struct {
 	SecretNamespace string
 	SyncTargets     []SyncTarget
 	DryRun          bool
+	UploadOnly      bool
 }
 
 // Load loads an optional local .env without overriding process environment.
@@ -52,6 +53,10 @@ func LoadFrom(getenv func(string) string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	uploadOnly, err := parseBool(getenv("UPLOAD_ONLY"))
+	if err != nil {
+		return nil, fmt.Errorf("UPLOAD_ONLY must be a boolean: %w", err)
+	}
 
 	targets, err := ParseTargets(getenv("SYNC_TARGETS"), getenv("CDN_DOMAINS"))
 	if err != nil {
@@ -65,6 +70,7 @@ func LoadFrom(getenv func(string) string) (*Config, error) {
 		SecretNamespace: strings.TrimSpace(getenv("K8S_SECRET_NAMESPACE")),
 		SyncTargets:     targets,
 		DryRun:          dryRun,
+		UploadOnly:      uploadOnly,
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
